@@ -1,24 +1,41 @@
 package com.neo.exp.Rest;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import com.neo.exp.config.CloudinaryConfig;
 import com.neo.exp.config.UserHolder;
 import com.neo.exp.dto.*;
 import com.neo.exp.entities.Comment;
+import com.neo.exp.entities.FileData;
+import com.neo.exp.entities.FileUploadForm;
 import com.neo.exp.entities.Posts.AppreciationPost;
 import com.neo.exp.entities.Posts.CelebrationPost;
 import com.neo.exp.entities.Posts.Post;
 import com.neo.exp.entities.Posts.SimplePost;
+import com.neo.exp.repositories.FileDataRepository;
+import com.neo.exp.services.MediaService;
 import com.neo.exp.services.PostService;
 import com.neo.exp.dto.CommentDTO;
+import org.jboss.resteasy.annotations.providers.multipart.MultipartForm;
+import org.jboss.resteasy.plugins.providers.multipart.InputPart;
+import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 import javax.ws.rs.*;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Path("/posts")
@@ -30,44 +47,70 @@ public class PostResource {
     PostService postService;
 
     @Inject
+    MediaService mediaService;
+
+    @Inject
     UserHolder userHolder;
 
+    @Inject
+    FileDataRepository fileDataRepository;
+    @Inject
+    CloudinaryConfig cloudinaryConfig;
     //************ Simple Post ****************************
     @POST
     @Path("/simple")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
     @RolesAllowed("employe")
-    public Response createSimplePost(SimplePostDTO dto) {
+    public Response createSimplePost(MultipartFormDataInput input) {
         String userID = userHolder.getUserId();
 
         if (userID == null) {
             return Response.status(Response.Status.UNAUTHORIZED).entity("Username is required").build();
         }
 
-        SimplePost createdPost = postService.createSimplePost(dto);
-
-        return Response.status(Response.Status.CREATED).entity(createdPost).build();
+        try {
+            // Delegate processing to the PostService
+            SimplePost createdPost = postService.createSimplePost(input, userHolder.getName(), userHolder.getUserId());
+            return Response.status(Response.Status.CREATED).entity(createdPost).build();
+        } catch (IOException e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+        }
     }
-
-
     @PUT
     @Path("/simple/{id}")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
     @RolesAllowed("employe")
     @Transactional
-    public Response updateSimplePost(@PathParam("id") Long id, SimplePostDTO dto) {
-        boolean success = postService.updateSimplePost(id, dto);
-        if (success) {
-            return Response.ok().build();
-        } else {
-            return Response.status(Response.Status.NOT_FOUND).entity("Post not found").build();
+    public Response updateSimplePost(@PathParam("id") Long id, @MultipartForm MultipartFormDataInput input) {
+        try {
+
+            boolean success = postService.updateSimplePost(id, input);
+            if (success) {
+                return Response.ok().build();
+            } else {
+                return Response.status(Response.Status.NOT_FOUND).entity("Post not found").build();
+            }
+        } catch (IOException e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
         }
     }
     @GET
     @Path("/getSimple")
     @RolesAllowed("employe")
     public Response getSimplePosts() {
+        List<SimplePostDTO> simplePostDTOs = postService.getSimplePosts();
+        return Response.ok(simplePostDTOs).build();
+    }
+
+    
+    /*
+    @GET
+    @Path("/getSimple")
+    @RolesAllowed("employe")
+    public Response getSimplePosts() {
         List<SimplePost> simplePosts = postService.getSimplePosts();
         return Response.ok(simplePosts).build();
-    }
+    }*/
 
     //************ Appreciation Post ****************************
     @POST

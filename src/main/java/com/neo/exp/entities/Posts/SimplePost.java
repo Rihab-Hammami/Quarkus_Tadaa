@@ -1,8 +1,12 @@
 package com.neo.exp.entities.Posts;
 
+import org.jboss.resteasy.annotations.providers.multipart.PartType;
+
 import javax.persistence.Entity;
 import javax.persistence.ElementCollection;
 import javax.persistence.DiscriminatorValue;
+import javax.ws.rs.core.MediaType;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -11,7 +15,7 @@ public class SimplePost extends Post {
     private String content;
 
     @ElementCollection
-    private List<String> media;
+    private List<String> media ;
 
     @ElementCollection
     private List<String> taggedUsers;

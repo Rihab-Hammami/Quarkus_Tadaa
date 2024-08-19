@@ -22,10 +22,6 @@ public class UserPoints {
         this.id = id;
     }
 
-    public UserProfile getUser() {
-        return userProfile;
-    }
-
     public void setUser(UserProfile userProfile) {
         this.userProfile = userProfile;
     }

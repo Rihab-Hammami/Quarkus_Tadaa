@@ -8,6 +8,10 @@ import javax.inject.Inject;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.ext.Provider;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Provider
 public class TokenFilter implements ContainerRequestFilter {
@@ -49,6 +53,16 @@ public class TokenFilter implements ContainerRequestFilter {
                 userHolder.setUserId(userId);
             }
 
+            Set<String> roles=jwt.getClaim("roles");
+            if (roles!= null) {
+                userHolder.setRoles(roles);
+            }
+
+
+
         }
+
     }
+
+
 }

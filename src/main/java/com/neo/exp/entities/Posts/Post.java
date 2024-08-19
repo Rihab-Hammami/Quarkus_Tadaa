@@ -36,6 +36,7 @@ public abstract class Post {
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
 
+    //hedhy ki tetnaha l getPosts madech tekhdem
     @JsonbTransient
     private List<Comment> comments= new ArrayList<>();
 

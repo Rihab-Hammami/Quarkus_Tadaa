@@ -1,6 +1,7 @@
 package com.neo.exp.config;
 
 import javax.enterprise.context.RequestScoped;
+import java.util.Set;
 
 @RequestScoped
 public class UserHolder {
@@ -10,6 +11,7 @@ public class UserHolder {
     private String lastName;
     private String userId; // Add this field
     private String name;
+    private Set<String> roles;
 
 
     public String getName() {
@@ -58,6 +60,14 @@ public class UserHolder {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
+    }
+    
+    public Set<String> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<String> roles) {
+        this.roles = roles;
     }
 
 }

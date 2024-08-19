@@ -1,5 +1,6 @@
 package com.neo.exp.entities;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
@@ -13,14 +14,30 @@ public class UserProfile {
     @Id
     private String userId;
 
+    @Column(name = "name")
     private String name;
+
+    @Column(name = "email")
     private String email;
+
+    @Column(name = "num")
     private int num;
+
+    @Column(name = "role")
     private String role;
+
+    @Column(name = "image")
     private String image;
+
+    @Column(name = "pays")
     private String pays;
+
+    @Column(name = "Apropos")
     private String Apropos;
-    private int  points;
+
+    @Column(name = "points")
+    private int points;
+
 
     public String getUserId() {
         return userId;

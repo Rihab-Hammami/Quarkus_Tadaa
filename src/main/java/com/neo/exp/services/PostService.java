@@ -1,21 +1,31 @@
 package com.neo.exp.services;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import com.neo.exp.config.CloudinaryConfig;
 import com.neo.exp.config.UserHolder;
 import com.neo.exp.dto.*;
 
 import com.neo.exp.entities.Comment;
+import com.neo.exp.entities.FileData;
+import com.neo.exp.entities.FileUploadForm;
 import com.neo.exp.entities.Posts.AppreciationPost;
 import com.neo.exp.entities.Posts.CelebrationPost;
 import com.neo.exp.entities.Posts.Post;
 import com.neo.exp.entities.Posts.SimplePost;
 import com.neo.exp.repositories.*;
-import org.hibernate.Hibernate;
+import org.jboss.resteasy.annotations.providers.multipart.MultipartForm;
+import org.jboss.resteasy.plugins.providers.multipart.InputPart;
+import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
-import java.util.List;
+import java.io.IOException;
+import java.util.*;
 import java.util.stream.Collectors;
+
 
 @ApplicationScoped
 public class PostService {
@@ -38,8 +48,108 @@ public class PostService {
     @Inject
     UserHolder userHolder;
 
-//************ Simple Post ****************************
+    @Inject
+    FileDataRepository fileDataRepository;
+    @Inject
+    CloudinaryConfig cloudinaryConfig;
+    @Inject
+    MediaService mediaService;
+
+
+
     @Transactional
+    public SimplePost createSimplePost(MultipartFormDataInput input, String userName, String userId) throws IOException {
+        // Extract form parameters
+        Map<String, List<InputPart>> formParts = input.getFormDataMap();
+        String content = mediaService.extractFormField(formParts, "content");
+        List<String> taggedUsers = mediaService.extractFormFieldList(formParts, "taggedUsers");
+
+        // Extract file parts
+        List<InputPart> mediaParts = mediaService.extractFileParts(input);
+
+        // Handle file uploads and create the post
+        List<String> mediaPaths = new ArrayList<>();
+        for (InputPart inputPart : mediaParts) {
+            FileUploadForm uploadForm = new FileUploadForm();
+            uploadForm.setFileData(inputPart);
+
+            // Upload the image and get the file path
+            String imagePath = mediaService.uploadDataToFileSystem(uploadForm);
+            mediaPaths.add(imagePath);  // Add the path to the media list
+        }
+        // Create the post
+        SimplePost post = new SimplePost();
+        post.setContent(content);
+        post.setMedia(mediaPaths);
+        post.setTaggedUsers(taggedUsers);// Set current time as creation time
+        post.setName(userName);
+        post.setUserId(userId);
+
+        return postRepository.save(post);
+    }
+
+    @Transactional
+    public boolean updateSimplePost(Long postId, MultipartFormDataInput input) throws IOException {
+        SimplePost post = simplePostRepository.findById(postId).orElse(null);
+        if (post == null) {
+            return false; // Post not found
+        }
+
+        // Check ownership
+        if (!post.getUserId().equals(userHolder.getUserId())) {
+            throw new RuntimeException("User not allowed");
+        }
+
+        // Extract form parameters
+        Map<String, List<InputPart>> formParts = input.getFormDataMap();
+        String content = mediaService.extractFormField(formParts, "content");
+        List<String> taggedUsers = mediaService.extractFormFieldList(formParts, "taggedUsers");
+
+        // Extract file parts
+        List<InputPart> mediaParts = mediaService.extractFileParts(input);
+        List<String> mediaPaths = new ArrayList<>();
+
+        if (!mediaParts.isEmpty()) {
+            // Handle file uploads and update the media paths
+            for (InputPart inputPart : mediaParts) {
+                FileUploadForm uploadForm = new FileUploadForm();
+                uploadForm.setFileData(inputPart);
+
+                // Upload the image and get the file path
+                String imagePath = mediaService.uploadDataToFileSystem(uploadForm);
+                mediaPaths.add(imagePath); // Add the new path to the media list
+            }
+
+            // If new media is uploaded, replace the old media paths
+            post.setMedia(mediaPaths);
+        }
+
+        // Update the rest of the fields if they are provided
+        if (content != null) {
+            post.setContent(content);
+        }
+        if (taggedUsers != null) {
+            post.setTaggedUsers(taggedUsers);
+        }
+        post.setName(userHolder.getName());
+        post.setUserId(userHolder.getUserId());
+
+        simplePostRepository.save(post);
+        return true;
+    }
+
+    public List<SimplePostDTO> getSimplePosts() {
+        List<SimplePost> simplePosts = simplePostRepository.findAll();
+
+        // Use the PostMapper to convert each SimplePost to SimplePostDTO
+        return simplePosts.stream()
+                .map(PostMapper::toSimplePostDTO)
+                .collect(Collectors.toList());
+    }
+
+
+    //************ Simple Post ****************************
+    /*@Transactional
     public SimplePost createSimplePost(SimplePostDTO dto) {
 
         SimplePost post = new SimplePost();
@@ -49,10 +159,14 @@ public class PostService {
         post.setCreatedAt(dto.getCreatedAt());
         post.setName(userHolder.getName());
         post.setUserId(userHolder.getUserId());
-        return postRepository.save(post);
-    }
 
-    @Transactional
+        return postRepository.save(post);
+    }*/
+
+
+
+
+   /* @Transactional
     public boolean updateSimplePost(Long postId, SimplePostDTO dto) {
         SimplePost post = simplePostRepository.findById(postId).orElse(null);
         if (post == null) {
@@ -60,7 +174,7 @@ public class PostService {
         }
 
         // Check ownership
-        if (!post.getName().equals(userHolder.getName())) {
+        if (!post.getUserId().equals(userHolder.getUserId())) {
             throw new RuntimeException("user not allowed ");
         }
 
@@ -82,7 +196,7 @@ public class PostService {
     }
     public List<SimplePost> getSimplePosts() {
         return simplePostRepository.findAll();
-    }
+    }*/
 
 
     //************ Appreciation Post ****************************
@@ -95,6 +209,7 @@ public class PostService {
         post.setTaggedUsers(dto.getTaggedUsers());
         post.setCreatedAt(dto.getCreatedAt());
         post.setName(userHolder.getName());
+        post.setUserId(userHolder.getUserId());
         return postRepository.save(post);
     }
     @Transactional
@@ -104,7 +219,7 @@ public class PostService {
             return false; // Post not found
         }
 
-        if (!post.getName().equals(userHolder.getName())) {
+        if (!post.getUserId().equals(userHolder.getUserId())) {
             return false; // Current user is not the owner of the post
         }
         if (dto.getPoints() != 0) {
@@ -139,6 +254,7 @@ public class PostService {
         post.setTaggedUsers(dto.getTaggedUsers());
         post.setCreatedAt(dto.getCreatedAt());
         post.setName(userHolder.getName());
+        post.setUserId(userHolder.getUserId());
         return postRepository.save(post);
     }
 
@@ -148,7 +264,7 @@ public class PostService {
         if (post == null) {
             return false;
         }
-        if (!post.getName().equals(userHolder.getName())) {
+        if (!post.getUserId().equals(userHolder.getUserId())) {
             throw new RuntimeException("user not allowed ");
         }
 
@@ -180,12 +296,13 @@ public class PostService {
         if (post == null) {
             return false;
         }
-        if (!post.getName().equals(userHolder.getName())) {
+        /*if (!post.getUserId().equals(userHolder.getUserId())) {
             throw new RuntimeException("user not allowed ");
-        }
+        }*/
         postRepository.delete(post);
         return true;
     }
+
     public List<Post> getAllPosts() {
         return postRepository.findAll();
     }
@@ -193,7 +310,6 @@ public class PostService {
     public Post getPostById(Long postId) {
         return postRepository.findById(postId).orElse(null); // Ensure the result is of the expected type
     }
-
 
 
 
@@ -241,7 +357,7 @@ public class PostService {
         Comment comment = new Comment();
         comment.setCommentText(commentText);
         comment.setPost(post);
-        comment.setUsername(userHolder.getUsername()); // Set username from UserHolder
+        comment.setUsername(userHolder.getName()); // Set username from UserHolder
         // No need to manually set createdAt as it is handled by @PrePersist
         post.getComments().add(comment);
         postRepository.save(post);
@@ -284,6 +400,7 @@ public class PostService {
         commentRepository.save(comment);
         return true;
     }
+
     @Transactional
     public List<CommentDTO> getCommentsByPostId(Long postId) {
         // Find the post by ID

@@ -1,14 +1,24 @@
 package com.neo.exp.dto;
 
-import java.util.List;
+import org.jboss.resteasy.plugins.providers.multipart.InputPart;
+import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 
-public class SimplePostDTO extends PostDTO{
+import javax.ws.rs.FormParam;
+import javax.ws.rs.core.MediaType;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+public class SimplePostDTO extends PostDTO {
+
+    @FormParam("content")
     private String content;
-    private List<String> media;
+
+    @FormParam("taggedUsers")
     private List<String> taggedUsers;
 
-    public SimplePostDTO() {
-    }
+    // Since media is a list of files, handle it with MultipartFormDataInput
+    private MultipartFormDataInput media;
 
     public String getContent() {
         return content;
@@ -18,14 +28,6 @@ public class SimplePostDTO extends PostDTO{
         this.content = content;
     }
 
-    public List<String> getMedia() {
-        return media;
-    }
-
-    public void setMedia(List<String> media) {
-        this.media = media;
-    }
-
     public List<String> getTaggedUsers() {
         return taggedUsers;
     }
@@ -33,4 +35,14 @@ public class SimplePostDTO extends PostDTO{
     public void setTaggedUsers(List<String> taggedUsers) {
         this.taggedUsers = taggedUsers;
     }
+
+    public MultipartFormDataInput getMedia() {
+        return media;
+    }
+
+    public void setMedia(MultipartFormDataInput mediaInput) {
+        this.media= media;
+    }
+
+
 }

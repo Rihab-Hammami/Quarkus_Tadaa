@@ -24,7 +24,6 @@ public class PostMapper {
         dto.setUserId(post.getUserId());
         dto.setCreatedAt(post.getCreatedAt());
         dto.setContent(post.getContent());
-        dto.setMedia(post.getMedia());
         dto.setTaggedUsers(post.getTaggedUsers());
         dto.setComments(post.getComments().stream()
                 .map(comment -> toCommentDTO(comment))
